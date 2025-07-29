@@ -2,8 +2,8 @@
 import os
 import time
 import cv2
-from picamera2 import Picamera2
 from modules.vision.iff import classify_image
+from modules.vision.camera import picam2
 
 # Parameters
 # ────────────────────────────────────────────────
@@ -19,14 +19,7 @@ DEBOUNCE_SECONDS = 10       # Time to wait after capturing
 # Prepare capture directory
 os.makedirs(CAPTURE_DIR, exist_ok=True)
 
-def capture_motion():
-    # Initialize camera
-    picam2 = Picamera2()
-    config = picam2.create_preview_configuration(
-        main={"size": (640, 480), "format": "RGB888"}
-    )
-    picam2.configure(config)
-    picam2.start()
+def detect_motion():
     time.sleep(1)  # Sensor warming up
 
     # Initialize background remover & morphological kernel
@@ -88,8 +81,5 @@ def capture_motion():
             # Avoid too fast loop
             time.sleep(0.1)
 
-    except KeyboardInterrupt:
-        print("\n== Stopped by user ==")
-
-if __name__ == "__main__":
-    capture_motion()
+    except Exception as e:
+        print(f"Motion detector error: {e}")
