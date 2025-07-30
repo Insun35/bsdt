@@ -35,7 +35,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.snapshot_label.setFrameShape(QtWidgets.QFrame.Box)
         hbox.addWidget(self.snapshot_label)
 
-        self.text_label = QtWidgets.QLabel("No captures yet.")
+        self.text_label = QtWidgets.QLabel("No entities detected yet.")
         self.text_label.setWordWrap(True)
         hbox.addWidget(self.text_label, 1)
 
