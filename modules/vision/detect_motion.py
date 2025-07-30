@@ -6,6 +6,7 @@ import sqlite3
 
 from modules.vision.iff import classify_image
 from modules.vision.camera import picam2
+from modules.vision.broadcast import notify_subscribers
 from utils.config import DB_PATH
 
 # Parameters
@@ -105,6 +106,12 @@ def detect_motion():
                         (timestamp, fname, cls)
                     )
                     conn.commit()
+                    notify_subscribers({
+                        "id": cur.lastrowid,
+                        "timestamp": timestamp,
+                        "filename":  fname,
+                        "classification": cls
+                    })
                     conn.close()
                     print(f"  [DB OK] {fname} → {cls}")
                 except Exception as e:
