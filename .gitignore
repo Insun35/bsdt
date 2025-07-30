@@ -39,4 +39,4 @@ Thumbs.db
 
 # Data
 data/
-logs/
+action_log.db

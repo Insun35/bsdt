@@ -2,12 +2,15 @@
 import os
 import time
 import cv2
+import sqlite3
+
 from modules.vision.iff import classify_image
 from modules.vision.camera import picam2
+from utils.config import DB_PATH
 
 # Parameters
 # ────────────────────────────────────────────────
-CAPTURE_DIR = "logs"
+CAPTURE_DIR = "captures"
 AREA_MIN = 1500
 AREA_MAX = 50000
 ASPECT_RATIO_MIN = 0.2
@@ -18,6 +21,25 @@ DEBOUNCE_SECONDS = 10       # Time to wait after capturing
 
 # Prepare capture directory
 os.makedirs(CAPTURE_DIR, exist_ok=True)
+
+# Initialize SQLite database
+print("Initializing SQLite database at", DB_PATH)
+try:
+    conn = sqlite3.connect(DB_PATH, check_same_thread=False)
+    cursor = conn.cursor()
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS action_logs (
+        id             INTEGER PRIMARY KEY AUTOINCREMENT,
+        timestamp      TEXT    NOT NULL,
+        filepath       TEXT    NOT NULL,
+        classification TEXT    NOT NULL
+    )
+    """)
+    conn.commit()
+    print("  [OK] Table 'action_logs' created.")
+except Exception as e:
+    print(f"Error: {e}")
+    exit(1)
 
 def detect_motion():
     time.sleep(1)  # Sensor warming up
@@ -75,6 +97,19 @@ def detect_motion():
                 cls = classify_image(fname)
                 print(f"Classification: {cls}")
                 
+                try:
+                    conn = sqlite3.connect(DB_PATH)
+                    cur  = conn.cursor()
+                    cur.execute(
+                        "INSERT INTO action_logs (timestamp, filepath, classification) VALUES (?, ?, ?)",
+                        (timestamp, fname, cls)
+                    )
+                    conn.commit()
+                    conn.close()
+                    print(f"  [DB OK] {fname} → {cls}")
+                except Exception as e:
+                    print(f"  [DB ERROR] {e}")
+
                 motion_count = 0
                 time.sleep(DEBOUNCE_SECONDS)
 

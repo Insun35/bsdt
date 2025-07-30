@@ -1,10 +1,51 @@
-from flask import Flask, Response
+import os
+from flask import Flask, Response, send_from_directory, jsonify
 import cv2
+import sqlite3
+
 from modules.vision.camera import picam2
+from modules.vision.detect_motion import DB_PATH
 
 PORT = 8080
+CAPTURES_DIR = "captures"
+BASE_DIR     = os.path.abspath(
+    os.path.join(
+        os.path.dirname(__file__),
+        "..",
+        ".."
+    )
+)
 
 app = Flask(__name__)
+app.config['CAPTURES_DIR'] = os.path.join(BASE_DIR, CAPTURES_DIR)
+
+@app.route('/captures/<path:filename>')
+def serve_capture(filename):
+    print(f"== Serving capture {filename} from {app.config['CAPTURES_DIR']} ==")
+    return send_from_directory(app.config['CAPTURES_DIR'], filename, as_attachment=True)
+
+@app.route('/latest')
+def latest():
+    conn = sqlite3.connect(DB_PATH, check_same_thread=False)
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT timestamp, filepath, classification "
+        "FROM action_logs ORDER BY id DESC LIMIT 1"
+    )
+    row = cur.fetchone()
+    conn.close()
+
+    if not row:
+        return jsonify({}), 204
+
+    ts, path, cls = row
+    fn = os.path.basename(path)
+    return jsonify({
+        "timestamp": ts,
+        "filename":  fn,
+        "classification": cls,
+        "image_url":   f"/captures/{fn}"
+    })
 
 def gen_frames():
     while True:
