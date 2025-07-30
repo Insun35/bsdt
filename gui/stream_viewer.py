@@ -3,6 +3,7 @@ import os
 import sqlite3
 import cv2
 import requests
+import json
 from PyQt5 import QtCore, QtGui, QtWidgets
 
 API_BASE = "http://localhost:8080"
@@ -34,6 +35,32 @@ class VideoThread(QtCore.QThread):
             scaled = qt_img.scaled(800, 450, QtCore.Qt.KeepAspectRatio)
             self.changePixmap.emit(scaled)
         cap.release()
+
+    def stop(self):
+        self._running = False
+        self.wait()
+
+
+class SSEThread(QtCore.QThread):
+    newEvent = QtCore.pyqtSignal(dict)
+
+    def __init__(self, url):
+        super().__init__()
+        self.url = url
+        self._running = True
+
+    def run(self):
+        with requests.get(self.url, stream=True) as resp:
+            for line in resp.iter_lines():
+                if not self._running:
+                    break
+                if line and line.startswith(b"data: "):
+                    payload = line[len(b"data: ") :]
+                    try:
+                        data = json.loads(payload.decode())
+                        self.newEvent.emit(data)
+                    except:
+                        pass
 
     def stop(self):
         self._running = False
@@ -77,22 +104,28 @@ class MainWindow(QtWidgets.QMainWindow):
         vbox.addWidget(bottom)
         self.setCentralWidget(central)
 
+        self.statusBar().showMessage("Ready", 2000)
+
+        # Video Thread
         self.thread = VideoThread(stream_url)
         self.thread.changePixmap.connect(self.update_video)
         self.thread.start()
 
+        # SSE Thread
+        self.sse = SSEThread(API_BASE + "/events")
+        self.sse.newEvent.connect(self.on_new_capture)
+        self.sse.start()
+
         self.current_id = None
         self.timer = QtCore.QTimer(self)
-        self.timer.timeout.connect(self.load_latest_capture)
         self.timer.start(self.POLL_INTERVAL_MS)
-
-        self.load_latest_capture()
 
     def update_video(self, qt_img):
         self.video_label.setPixmap(QtGui.QPixmap.fromImage(qt_img))
 
-    def load_latest_capture(self):
+    def on_new_capture(self, data: dict):
         try:
+            self.statusBar().showMessage("🚨 Motion detected!", 2000)
             r = requests.get(API_BASE + "/latest", timeout=1.0)
             if r.status_code != 200:
                 return
@@ -116,7 +149,7 @@ class MainWindow(QtWidgets.QMainWindow):
             # 2) update text
             display = (
                 f"<b>Time:</b> {data['timestamp']}<br>"
-                f"<b>Class:</b> {data['classification']}<br>"
+                f"<b>Class:</b> {data['classification']}"
             )
             self.text_label.setText(display)
 
@@ -125,6 +158,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def closeEvent(self, event):
         self.thread.stop()
+        self.sse.stop()
         event.accept()
 
 
