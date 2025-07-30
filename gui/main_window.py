@@ -1,70 +1,8 @@
-import sys
-import os
-import sqlite3
-import cv2
+from PyQt5 import QtWidgets, QtCore, QtGui
 import requests
-import json
-from PyQt5 import QtCore, QtGui, QtWidgets
 
-API_BASE = "http://localhost:8080"
-
-
-class VideoThread(QtCore.QThread):
-    changePixmap = QtCore.pyqtSignal(QtGui.QImage)
-
-    def __init__(self, url):
-        super().__init__()
-        self.url = url
-        self._running = True
-
-    def run(self):
-        cap = cv2.VideoCapture(self.url)
-        if not cap.isOpened():
-            print(f"Error: cannot open stream {self.url}")
-            return
-        while self._running:
-            ret, frame = cap.read()
-            if not ret:
-                break
-            rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            h, w, ch = rgb.shape
-            bytes_per_line = ch * w
-            qt_img = QtGui.QImage(
-                rgb.data, w, h, bytes_per_line, QtGui.QImage.Format_RGB888
-            )
-            scaled = qt_img.scaled(800, 450, QtCore.Qt.KeepAspectRatio)
-            self.changePixmap.emit(scaled)
-        cap.release()
-
-    def stop(self):
-        self._running = False
-        self.wait()
-
-
-class SSEThread(QtCore.QThread):
-    newEvent = QtCore.pyqtSignal(dict)
-
-    def __init__(self, url):
-        super().__init__()
-        self.url = url
-        self._running = True
-
-    def run(self):
-        with requests.get(self.url, stream=True) as resp:
-            for line in resp.iter_lines():
-                if not self._running:
-                    break
-                if line and line.startswith(b"data: "):
-                    payload = line[len(b"data: ") :]
-                    try:
-                        data = json.loads(payload.decode())
-                        self.newEvent.emit(data)
-                    except:
-                        pass
-
-    def stop(self):
-        self._running = False
-        self.wait()
+from utils.config import API_BASE
+from gui.thread import VideoThread, SSEThread
 
 
 class MainWindow(QtWidgets.QMainWindow):
@@ -73,7 +11,7 @@ class MainWindow(QtWidgets.QMainWindow):
     def __init__(self, stream_url):
         super().__init__()
 
-        self.setWindowTitle("BSDT Live Stream + Snapshot")
+        self.setWindowTitle("BSDT")
         self.resize(820, 720)
 
         central = QtWidgets.QWidget()
@@ -97,7 +35,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.snapshot_label.setFrameShape(QtWidgets.QFrame.Box)
         hbox.addWidget(self.snapshot_label)
 
-        self.text_label = QtWidgets.QLabel("No captures yet.")
+        self.text_label = QtWidgets.QLabel("No entities detected yet.")
         self.text_label.setWordWrap(True)
         hbox.addWidget(self.text_label, 1)
 
@@ -160,11 +98,3 @@ class MainWindow(QtWidgets.QMainWindow):
         self.thread.stop()
         self.sse.stop()
         event.accept()
-
-
-if __name__ == "__main__":
-    app = QtWidgets.QApplication(sys.argv)
-    url = f"{API_BASE}/video_feed"
-    window = MainWindow(url)
-    window.show()
-    sys.exit(app.exec_())
