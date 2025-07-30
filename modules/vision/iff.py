@@ -17,8 +17,8 @@ def classify_image(path: str) -> tuple[str,str]:
                 {
                     "type": "text",
                     "text": "Classify the following image into one of: "
-                    "'bird', 'insect', 'human', 'leaf', 'others'. "
-                    "Then give a brief reason."
+                    "'bird', 'insect', 'human', 'leaf', 'trash', 'others'. "
+                    "Don't include any other text in your response."
                 },
                 {
                     "type": "image_url",
