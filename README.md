@@ -1,6 +1,6 @@
 # BSDT
 
-BSDT(Bird Shie Defense Turret) is a defense system that protects private property from contamination such as droppings or dead bodies by identifying and preemptively striking birds or insects approaching private property from the air.
+BSDT(Bird Shit Defense Turret) is a defense system that protects private property from contamination such as droppings or dead bodies by identifying and preemptively striking birds or insects approaching private property from the air.
 
 ## 🎯 Goal
 
@@ -102,7 +102,7 @@ pip install pyqt5 opencv-python requests sseclient-py
 Edit the top of stream_viewer_with_event.py (or pass as argument) to point at your Pi:
 
 ```ini
-API_BASE = "http://192.168.1.42:8080"   # ← replace with your Pi’s IP
+API_BASE = "http://<Pi_IP>:8080"   # ← replace with your Pi’s IP
 ```
 
 2.5. Launch the GUI
@@ -121,7 +121,7 @@ You should see:
 
 - **Hardware**
   - Raspberry Pi 4B
-  - Camara - Raspberry Pi camera module 5MP
+  - Camera - Raspberry Pi camera module 5MP
   - Monitoring device: Macbook Pro
 - **Vision computing:** OpenCV, YOLOv5 (TBD)
 - **LLM:** OpenAI API
@@ -199,4 +199,4 @@ bsdt/
 - Implement prototype using OpenAI API
   - ~ Aug 2025: motion detection
   - ~ Sep 2025: complete prototype
-- OpenAI API → on-divice model migration
+- OpenAI API → on-device model migration
